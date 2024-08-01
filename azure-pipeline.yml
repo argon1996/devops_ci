@@ -105,3 +105,20 @@ stages:
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster)
           kubectl apply -f deployment.yaml
       displayName: 'Desplegar en AKS'
+
+- stage: Notify
+  dependsOn: Deploy
+  jobs:
+  - job: SendEmailNotification
+    steps:
+    - task: SendEmail@1
+      inputs:
+        to: 'edwardpinzon651@gmail.com'
+        subject: 'Pipeline Execution Result'
+        body: 'The pipeline has been executed successfully.'
+        cc: ''  # Opcional: direcciones de correo CC
+        bcc: ''  # Opcional: direcciones de correo BCC
+        from: 'your-email@example.com'
+        isBodyHtml: false
+        attachments: ''  # Opcional: ruta absoluta a los archivos adjuntos
+      displayName: 'Enviar notificación por correo'
