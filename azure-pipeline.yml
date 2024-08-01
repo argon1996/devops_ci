@@ -2,32 +2,24 @@ trigger:
 - main
 
 pool:
-  name: 'Default'  # Nombre del pool donde está tu agente autoalojado
+  name: 'Default'
 
 variables:
   imageRepository: 'edwardpinzon651/hello-world'
   containerRegistry: 'miregistro1996.azurecr.io'
   dockerfilePath: 'Dockerfile'
   tag: '$(Build.BuildId)'
-  azureSubscription: 'AzureServiceConnection'  # Nombre de tu conexión de servicio
+  azureSubscription: 'AzureServiceConnection'
   resourceGroup: 'miNuevoGrupoDeRecursos'
   aksCluster: 'miClusterAKS'
-  sonarQubeEndpoint: 'sonarqube'  # Nombre de tu conexión de servicio a SonarQube
-  sonarQubeProjectKey: 'pruebaultima-key'  # Clave del proyecto en SonarQube
-  sonarQubeProjectName: 'pruebaultima'  # Nombre del proyecto en SonarQube
+  sonarQubeEndpoint: 'sonarqube'
+  sonarQubeProjectKey: 'pruebaultima-key'
+  sonarQubeProjectName: 'pruebaultima'
 
 stages:
-- stage: Checkout
+- stage: Build
   jobs:
-  - job: Checkout
-    steps:
-    - checkout: self
-      displayName: 'Clonar repositorio'
-
-- stage: Install
-  dependsOn: Checkout
-  jobs:
-  - job: Install
+  - job: Build
     steps:
     - task: UseNode@1
       inputs:
@@ -37,19 +29,6 @@ stages:
     - script: |
         npm install
       displayName: 'Instalar dependencias'
-
-- stage: SonarQubeAnalysis
-  dependsOn: Install
-  jobs:
-  - job: SonarQubeAnalysis
-    steps:
-    - task: adopt-openjdk-installer@1
-      inputs:
-        majorVersion: '17'
-        useLatestOption: 'latest'
-        jdkArchitectureOption: 'x64'
-        jvmOption: 'hotspot'
-      displayName: 'Instalar AdoptOpenJDK 17'
 
     - task: SonarQubePrepare@5
       inputs:
@@ -69,20 +48,10 @@ stages:
         pollingTimeoutSec: '300'
       displayName: 'Publicar resultados de SonarQube'
 
-- stage: TestCode
-  dependsOn: SonarQubeAnalysis
-  jobs:
-  - job: TestCode
-    steps:
     - script: |
         npm test
       displayName: 'Ejecutar pruebas unitarias'
 
-- stage: BuildDocker
-  dependsOn: TestCode
-  jobs:
-  - job: BuildDocker
-    steps:
     - script: |
         docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
         docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
@@ -98,7 +67,6 @@ stages:
       displayName: 'Enviar imagen Docker al registro'
 
 - stage: Deploy
-  dependsOn: BuildDocker
   jobs:
   - job: Deploy
     steps:
