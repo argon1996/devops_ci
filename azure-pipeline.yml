@@ -39,8 +39,17 @@ stages:
         npm install
       displayName: 'Instalar dependencias'
 
-- stage: SonarQubeAnalysis
+- stage: LintCode
   dependsOn: Install
+  jobs:
+  - job: LintCode
+    steps:
+    - script: |
+        npm run lint
+      displayName: 'Ejecutar análisis de código estático'
+
+- stage: SonarQubeAnalysis
+  dependsOn: LintCode
   jobs:
   - job: SonarQubeAnalysis
     steps:
