@@ -1,0 +1,66 @@
+trigger:
+- main
+
+pool:
+  name: 'Default'  # Nombre del pool donde está tu agente autoalojado
+
+variables:
+  imageRepository: 'edwardpinzon651/hello-world'
+  containerRegistry: 'miregistro1996.azurecr.io'
+  dockerfilePath: 'Dockerfile'
+  tag: '$(Build.BuildId)'
+  azureSubscription: 'AzureServiceConnection'  # Nombre de tu conexión de servicio
+  resourceGroup: 'miNuevoGrupoDeRecursos'
+  aksCluster: 'miClusterAKS'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - task: UseNode@1
+      inputs:
+        versionSpec: '14.x'
+        checkLatest: true
+      displayName: 'Use Node.js 14.x'
+
+    - script: |
+        npm install
+      displayName: 'Instalar dependencias'
+
+    - script: |
+        npm run lint
+      displayName: 'Ejecutar análisis de código estático'
+
+    - script: |
+        npm test
+      displayName: 'Ejecutar pruebas unitarias'
+
+    - script: |
+        docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
+        docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
+      displayName: 'Construir imagen Docker'
+
+    - task: Docker@2
+      inputs:
+        command: 'login'
+        containerRegistry: 'dockerRegistryConnection'
+      displayName: 'Iniciar sesión en Docker Registry'
+
+    - script: |
+        docker push $(containerRegistry)/$(imageRepository):$(tag)
+      displayName: 'Enviar imagen Docker al registro'
+
+- stage: Deploy
+  jobs:
+  - job: Deploy
+    steps:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: '$(azureSubscription)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster)
+          kubectl apply -f deployment.yaml
+      displayName: 'Desplegar en AKS'
