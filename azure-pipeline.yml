@@ -51,11 +51,7 @@ stages:
         $env:PATH += ";$(pwd)\sonar-scanner-4.6.2.2472-windows\bin"
         
         # Ejecuta el análisis de SonarQube
-        sonar-scanner -Dsonar.projectKey=$(sonarQubeProjectKey) `
-                      -Dsonar.projectName=$(sonarQubeProjectName) `
-                      -Dsonar.host.url=$(sonarQubeEndpoint) `
-                      -Dsonar.login=$(sonarQubeLogin) `
-                      -Dsonar.sources=.
+        Start-Process -FilePath "sonar-scanner.bat" -ArgumentList @("-Dsonar.projectKey=$(sonarQubeProjectKey)", "-Dsonar.projectName=$(sonarQubeProjectName)", "-Dsonar.host.url=$(sonarQubeEndpoint)", "-Dsonar.login=$(sonarQubeLogin)", "-Dsonar.sources=.") -Wait -NoNewWindow
       displayName: 'Instalar y ejecutar análisis de SonarQube'
 
 - stage: TestCode
