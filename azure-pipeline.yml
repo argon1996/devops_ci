@@ -44,27 +44,13 @@ jobs:
       Invoke-WebRequest -Uri $url -OutFile $output
       Expand-Archive -Path $output -DestinationPath . -Force
       $env:PATH = "$(Get-Location)\sonar-scanner-$(sonarScannerVersion)-windows\bin;$env:PATH"
+      [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH, [System.EnvironmentVariableTarget]::Process)
       Write-Output "SonarScanner $(sonarScannerVersion) descargado e instalado."
     displayName: 'Instalar SonarScanner'
-
-  - task: SonarQubePrepare@5
-    inputs:
-      SonarQube: '$(sonarQubeEndpoint)'
-      scannerMode: 'CLI'
-      configMode: 'manual'
-      cliProjectKey: '$(sonarQubeProjectKey)'
-      cliProjectName: '$(sonarQubeProjectName)'
-      cliSources: '.'
-    displayName: 'Preparar análisis de SonarQube'
 
   - script: |
       sonar-scanner
     displayName: 'Ejecutar análisis de SonarQube'
-
-  - task: SonarQubePublish@5
-    inputs:
-      pollingTimeoutSec: '300'
-    displayName: 'Publicar resultados de SonarQube'
 
 - job: TestCode
   dependsOn: SonarQubeAnalysis
