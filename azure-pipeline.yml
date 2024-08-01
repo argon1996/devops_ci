@@ -106,6 +106,23 @@ stages:
           kubectl apply -f deployment.yaml
       displayName: 'Desplegar en AKS'
 
+- stage: ServerHealthCheck
+  dependsOn: BuildDocker
+  jobs:
+  - job: ServerHealthCheck
+    steps:
+    - script: |
+        git clone https://github.com/argon1996/server-health-check.git
+      displayName: 'Clonar repositorio de verificación de estado del servidor'
+    
+    - script: |
+        pip install requests
+      displayName: 'Instalar dependencias de Python'
+
+    - script: |
+        python server-health-check/health_check.py
+      displayName: 'Ejecutar script de verificación de estado del servidor'
+
 - stage: Notify
   dependsOn: Deploy
   jobs:
