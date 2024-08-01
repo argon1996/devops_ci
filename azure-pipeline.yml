@@ -38,11 +38,13 @@ jobs:
 - job: SonarQubeAnalysis
   dependsOn: Install
   steps:
-  - script: |
-      wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$(sonarScannerVersion)-linux.zip
-      unzip sonar-scanner-cli-$(sonarScannerVersion)-linux.zip
-      export PATH=$(pwd)/sonar-scanner-$(sonarScannerVersion)-linux/bin:$PATH
-      echo "SonarScanner $(sonarScannerVersion) descargado e instalado."
+  - powershell: |
+      $url = "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$(sonarScannerVersion)-windows.zip"
+      $output = "sonar-scanner.zip"
+      Invoke-WebRequest -Uri $url -OutFile $output
+      Expand-Archive -Path $output -DestinationPath . -Force
+      $env:PATH = "$(Get-Location)\sonar-scanner-$(sonarScannerVersion)-windows\bin;$env:PATH"
+      Write-Output "SonarScanner $(sonarScannerVersion) descargado e instalado."
     displayName: 'Instalar SonarScanner'
 
   - task: SonarQubePrepare@5
