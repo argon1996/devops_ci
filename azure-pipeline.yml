@@ -15,76 +15,82 @@ variables:
   sonarQubeEndpoint: 'sonarqube'  # Nombre de tu conexión de servicio a SonarQube
   sonarQubeProjectKey: 'pruebaultima-key'  # Clave del proyecto en SonarQube
   sonarQubeProjectName: 'pruebaultima'  # Nombre del proyecto en SonarQube
-  sonarScannerVersion: '4.6.2.2472'  # Versión del SonarScanner compatible con Java 11
 
-jobs:
-- job: Checkout
-  steps:
-  - checkout: self
-    displayName: 'Clonar repositorio'
+stages:
+- stage: Checkout
+  jobs:
+  - job: Checkout
+    steps:
+    - checkout: self
+      displayName: 'Clonar repositorio'
 
-- job: Install
+- stage: Install
   dependsOn: Checkout
-  steps:
-  - task: UseNode@1
-    inputs:
-      versionSpec: '14.x'
-      checkLatest: true
+  jobs:
+  - job: Install
+    steps:
+    - task: UseNode@1
+      inputs:
+        versionSpec: '14.x'
+        checkLatest: true
 
-  - script: |
-      npm install
-    displayName: 'Instalar dependencias'
+    - script: |
+        npm install
+      displayName: 'Instalar dependencias'
 
-- job: SonarQubeAnalysis
+- stage: SonarQubeAnalysis
   dependsOn: Install
-  steps:
-  - powershell: |
-      $url = "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$(sonarScannerVersion)-windows.zip"
-      $output = "sonar-scanner.zip"
-      Invoke-WebRequest -Uri $url -OutFile $output
-      Expand-Archive -Path $output -DestinationPath . -Force
-      $scannerPath = "$(Get-Location)\sonar-scanner-$(sonarScannerVersion)-windows\bin"
-      [System.Environment]::SetEnvironmentVariable('PATH', "$scannerPath;$env:PATH", [System.EnvironmentVariableTarget]::Process)
-      Write-Output "SonarScanner $(sonarScannerVersion) descargado e instalado."
-    displayName: 'Instalar SonarScanner'
+  jobs:
+  - job: SonarQubeAnalysis
+    steps:
+    - powershell: |
+        # Asegúrate de que el SonarScanner esté instalado y en el PATH
+        if (!(Get-Command sonar-scanner -ErrorAction SilentlyContinue)) {
+          Write-Error "SonarScanner no está instalado o no está en el PATH."
+          exit 1
+        }
+        sonar-scanner -Dsonar.projectKey=$(sonarQubeProjectKey) -Dsonar.projectName=$(sonarQubeProjectName) -Dsonar.host.url=$(sonarQubeEndpoint)
+      displayName: 'Ejecutar análisis de SonarQube'
 
-  - powershell: |
-      Start-Process sonar-scanner -NoNewWindow -Wait
-    displayName: 'Ejecutar análisis de SonarQube'
-
-- job: TestCode
+- stage: TestCode
   dependsOn: SonarQubeAnalysis
-  steps:
-  - script: |
-      npm test
-    displayName: 'Ejecutar pruebas unitarias'
+  jobs:
+  - job: TestCode
+    steps:
+    - script: |
+        npm test
+      displayName: 'Ejecutar pruebas unitarias'
 
-- job: BuildDocker
+- stage: BuildDocker
   dependsOn: TestCode
-  steps:
-  - script: |
-      docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
-      docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
-    displayName: 'Construir imagen Docker'
+  jobs:
+  - job: BuildDocker
+    steps:
+    - script: |
+        docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
+        docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
+      displayName: 'Construir imagen Docker'
 
-  - task: Docker@2
-    inputs:
-      command: 'login'
-      containerRegistry: 'dockerRegistryConnection'
+    - task: Docker@2
+      inputs:
+        command: 'login'
+        containerRegistry: 'dockerRegistryConnection'
 
-  - script: |
-      docker push $(containerRegistry)/$(imageRepository):$(tag)
-    displayName: 'Enviar imagen Docker al registro'
+    - script: |
+        docker push $(containerRegistry)/$(imageRepository):$(tag)
+      displayName: 'Enviar imagen Docker al registro'
 
-- job: Deploy
+- stage: Deploy
   dependsOn: BuildDocker
-  steps:
-  - task: AzureCLI@2
-    inputs:
-      azureSubscription: '$(azureSubscription)'
-      scriptType: 'ps'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster)
-        kubectl apply -f deployment.yaml
-    displayName: 'Desplegar en AKS'
+  jobs:
+  - job: Deploy
+    steps:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: '$(azureSubscription)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster)
+          kubectl apply -f deployment.yaml
+      displayName: 'Desplegar en AKS'
