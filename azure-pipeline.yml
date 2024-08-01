@@ -2,40 +2,62 @@ trigger:
 - main
 
 pool:
-  name: 'Default'  # Nombre del pool donde está tu agente autoalojado
+  name: 'Default'
 
 variables:
   imageRepository: 'edwardpinzon651/hello-world'
   containerRegistry: 'miregistro1996.azurecr.io'
   dockerfilePath: 'Dockerfile'
   tag: '$(Build.BuildId)'
-  azureSubscription: 'AzureServiceConnection'  # Nombre de tu conexión de servicio
+  azureSubscription: 'AzureServiceConnection'
   resourceGroup: 'miNuevoGrupoDeRecursos'
   aksCluster: 'miClusterAKS'
 
 stages:
-- stage: Build
+- stage: Checkout
   jobs:
-  - job: Build
+  - job: Checkout
+    steps:
+    - checkout: self
+      displayName: 'Clonar repositorio'
+
+- stage: Install
+  dependsOn: Checkout
+  jobs:
+  - job: Install
     steps:
     - task: UseNode@1
       inputs:
         versionSpec: '14.x'
         checkLatest: true
-      displayName: 'Use Node.js 14.x'
 
     - script: |
         npm install
       displayName: 'Instalar dependencias'
 
+- stage: LintCode
+  dependsOn: Install
+  jobs:
+  - job: LintCode
+    steps:
     - script: |
         npm run lint
       displayName: 'Ejecutar análisis de código estático'
 
+- stage: TestCode
+  dependsOn: LintCode
+  jobs:
+  - job: TestCode
+    steps:
     - script: |
         npm test
       displayName: 'Ejecutar pruebas unitarias'
 
+- stage: BuildDocker
+  dependsOn: TestCode
+  jobs:
+  - job: BuildDocker
+    steps:
     - script: |
         docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
         docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
@@ -45,13 +67,13 @@ stages:
       inputs:
         command: 'login'
         containerRegistry: 'dockerRegistryConnection'
-      displayName: 'Iniciar sesión en Docker Registry'
 
     - script: |
         docker push $(containerRegistry)/$(imageRepository):$(tag)
       displayName: 'Enviar imagen Docker al registro'
 
 - stage: Deploy
+  dependsOn: BuildDocker
   jobs:
   - job: Deploy
     steps:
