@@ -44,13 +44,14 @@ stages:
   - job: SonarQubeAnalysis
     steps:
     - powershell: |
-        # Asegúrate de que el SonarScanner esté instalado y en el PATH
-        if (!(Get-Command sonar-scanner -ErrorAction SilentlyContinue)) {
-          Write-Error "SonarScanner no está instalado o no está en el PATH."
-          exit 1
-        }
+        # Descarga e instala SonarScanner
+        Invoke-WebRequest -Uri "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-windows.zip" -OutFile "sonar-scanner.zip"
+        Expand-Archive -Path "sonar-scanner.zip" -DestinationPath "."
+        $env:PATH += ";$(pwd)\sonar-scanner-4.6.2.2472-windows\bin"
+        
+        # Ejecuta el análisis de SonarQube
         sonar-scanner -Dsonar.projectKey=$(sonarQubeProjectKey) -Dsonar.projectName=$(sonarQubeProjectName) -Dsonar.host.url=$(sonarQubeEndpoint)
-      displayName: 'Ejecutar análisis de SonarQube'
+      displayName: 'Instalar y ejecutar análisis de SonarQube'
 
 - stage: TestCode
   dependsOn: SonarQubeAnalysis
