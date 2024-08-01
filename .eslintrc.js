@@ -1,25 +1,24 @@
 module.exports = {
-    "env": {
-      "browser": true,
-      "es2021": true,
-      "node": true,
-      "mocha": true
+  parserOptions: {
+    ecmaVersion: 2020,
+    sourceType: 'module',
+  },
+  env: {
+    browser: true,
+    es2021: true,
+    node: true,
+    jest: true,
+  },
+  extends: [
+    'eslint:recommended',
+    'plugin:react/recommended',
+  ],
+  settings: {
+    react: {
+      version: 'detect',
     },
-    "extends": [
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "ecmaFeatures": {
-        "jsx": true
-      },
-      "ecmaVersion": 12,
-      "sourceType": "module"
-    },
-    "rules": {
-      "indent": ["error", 2],
-      "linebreak-style": ["error", "unix"],
-      "quotes": ["error", "single"],
-      "semi": ["error", "always"]
-    }
-  };
-  
+  },
+  rules: {
+    // Puedes agregar o sobrescribir reglas aquí
+  },
+};
