@@ -44,11 +44,9 @@ stages:
   - job: SonarQubeAnalysis
     steps:
     - script: |
-        # Descargar e instalar Java 17
-        curl -Lo openjdk-17.tar.gz https://download.java.net/java/GA/jdk17/0d483ceecf5d4c4e85f4e3df9e5a60d29b0dfe77/jdk-17_linux-x64_bin.tar.gz
-        mkdir /usr/local/java
-        tar -xvf openjdk-17.tar.gz -C /usr/local/java
-        export JAVA_HOME=/usr/local/java/jdk-17
+        sudo apt-get update
+        sudo apt-get install -y openjdk-17-jdk
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
         export PATH=$JAVA_HOME/bin:$PATH
         java -version
       displayName: 'Instalar y configurar Java 17'
