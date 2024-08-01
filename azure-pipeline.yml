@@ -2,29 +2,24 @@ trigger:
 - main
 
 pool:
-  name: 'Default'
+  name: 'Default'  # Nombre del pool donde está tu agente autoalojado
 
 variables:
   imageRepository: 'edwardpinzon651/hello-world'
   containerRegistry: 'miregistro1996.azurecr.io'
   dockerfilePath: 'Dockerfile'
   tag: '$(Build.BuildId)'
-  azureSubscription: 'AzureServiceConnection'
+  azureSubscription: 'AzureServiceConnection'  # Nombre de tu conexión de servicio
   resourceGroup: 'miNuevoGrupoDeRecursos'
   aksCluster: 'miClusterAKS'
+  sonarQubeEndpoint: 'sonarqube'  # Nombre de tu conexión de servicio a SonarQube
+  sonarQubeProjectKey: 'pruebaultima-key'  # Clave del proyecto en SonarQube
+  sonarQubeProjectName: 'pruebaultima'  # Nombre del proyecto en SonarQube
 
 stages:
-- stage: Checkout
+- stage: Build
   jobs:
-  - job: Checkout
-    steps:
-    - checkout: self
-      displayName: 'Clonar repositorio'
-
-- stage: Install
-  dependsOn: Checkout
-  jobs:
-  - job: Install
+  - job: Build
     steps:
     - task: UseNode@1
       inputs:
@@ -35,29 +30,34 @@ stages:
         npm install
       displayName: 'Instalar dependencias'
 
-- stage: LintCode
-  dependsOn: Install
-  jobs:
-  - job: LintCode
-    steps:
-    - script: |
-        npm run lint
-      displayName: 'Ejecutar análisis de código estático'
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          ./lint.sh
+      displayName: 'Ejecutar análisis de código estático con Bash'
 
-- stage: TestCode
-  dependsOn: LintCode
-  jobs:
-  - job: TestCode
-    steps:
+    # Tareas de SonarQube
+    - task: SonarQubePrepare@5
+      inputs:
+        SonarQube: '$(sonarQubeEndpoint)'
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: '$(sonarQubeProjectKey)'
+        cliProjectName: '$(sonarQubeProjectName)'
+        cliSources: '.'
+
+    - task: SonarQubeAnalyze@5
+
+    - task: SonarQubePublish@5
+      inputs:
+        pollingTimeoutSec: '300'
+
+    # Comentado para evitar errores mientras no hay pruebas unitarias configuradas
     - script: |
         npm test
       displayName: 'Ejecutar pruebas unitarias'
 
-- stage: BuildDocker
-  dependsOn: TestCode
-  jobs:
-  - job: BuildDocker
-    steps:
     - script: |
         docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
         docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
@@ -73,7 +73,6 @@ stages:
       displayName: 'Enviar imagen Docker al registro'
 
 - stage: Deploy
-  dependsOn: BuildDocker
   jobs:
   - job: Deploy
     steps:
