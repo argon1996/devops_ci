@@ -1,25 +1,25 @@
 module.exports = {
-    parserOptions: {
-      ecmaVersion: 2020,
-      sourceType: 'module'
-    },
-    env: {
-      browser: true,   // Si tu código se ejecuta en el navegador
-      es2021: true,    // Soporte para características de ECMAScript 2021
-      node: true,      // Soporte para Node.js
-      jest: true       // Soporte para Jest
-    },
-    extends: [
-      'eslint:recommended',
-      'plugin:react/recommended'
-    ],
-    settings: {
-      react: {
-        version: 'detect' // Detecta automáticamente la versión de React
-      }
-    },
-    rules: {
-      // Puedes agregar o sobrescribir reglas aquí
+  parserOptions: {
+    ecmaVersion: 2020,
+    sourceType: 'module'
+  },
+  env: {
+    browser: true,
+    es2021: true,
+    node: true,
+    jest: true
+  },
+  extends: [
+    'eslint:recommended',
+    'plugin:react/recommended'
+  ],
+  settings: {
+    react: {
+      version: 'detect'
     }
-  };
-  
+  },
+  rules: {
+    'no-unused-vars': 'error', // Regla para detectar variables no usadas
+    'semi': ['error', 'always'] // Regla para asegurar punto y coma al final de cada línea
+  }
+};
