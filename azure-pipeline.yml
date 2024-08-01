@@ -17,9 +17,9 @@ variables:
   sonarQubeProjectName: 'pruebaultima'
 
 stages:
-- stage: Build
+- stage: InstallDependencies
   jobs:
-  - job: Build
+  - job: InstallDependencies
     steps:
     - task: UseNode@1
       inputs:
@@ -30,6 +30,23 @@ stages:
         npm install
       displayName: 'Instalar dependencias'
 
+- stage: LintCode
+  dependsOn: InstallDependencies
+  jobs:
+  - job: LintCode
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          ./lint.sh
+      displayName: 'Ejecutar análisis de código estático con Bash'
+
+- stage: SonarQubeAnalysis
+  dependsOn: LintCode
+  jobs:
+  - job: SonarQubeAnalysis
+    steps:
     - task: SonarQubePrepare@5
       inputs:
         SonarQube: '$(sonarQubeEndpoint)'
@@ -48,15 +65,30 @@ stages:
         pollingTimeoutSec: '300'
       displayName: 'Publicar resultados de SonarQube'
 
+- stage: UnitTests
+  dependsOn: SonarQubeAnalysis
+  jobs:
+  - job: UnitTests
+    steps:
     - script: |
         npm test
       displayName: 'Ejecutar pruebas unitarias'
 
+- stage: BuildDockerImage
+  dependsOn: UnitTests
+  jobs:
+  - job: BuildDockerImage
+    steps:
     - script: |
         docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
         docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
       displayName: 'Construir imagen Docker'
 
+- stage: PushDockerImage
+  dependsOn: BuildDockerImage
+  jobs:
+  - job: PushDockerImage
+    steps:
     - task: Docker@2
       inputs:
         command: 'login'
@@ -66,9 +98,10 @@ stages:
         docker push $(containerRegistry)/$(imageRepository):$(tag)
       displayName: 'Enviar imagen Docker al registro'
 
-- stage: Deploy
+- stage: DeployToAKS
+  dependsOn: PushDockerImage
   jobs:
-  - job: Deploy
+  - job: DeployToAKS
     steps:
     - task: AzureCLI@2
       inputs:
