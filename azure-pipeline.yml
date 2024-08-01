@@ -57,11 +57,11 @@ stages:
     steps:
     - task: adopt-openjdk-installer@1
       inputs:
-        majorVersion: '11'
+        majorVersion: '17'
         useLatestOption: 'latest'
         jdkArchitectureOption: 'x64'
         jvmOption: 'hotspot'
-      displayName: 'Instalar AdoptOpenJDK 11'
+      displayName: 'Instalar AdoptOpenJDK 17'
 
     - task: SonarQubePrepare@5
       inputs:
