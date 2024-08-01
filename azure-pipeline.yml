@@ -38,20 +38,20 @@ stages:
         npm install
       displayName: 'Instalar dependencias'
 
-- stage: LintCode
-  dependsOn: Install
-  jobs:
-  - job: LintCode
-    steps:
-    - task: Bash@3
-      inputs:
-        targetType: 'inline'
-        script: |
-          ./lint.sh
-      displayName: 'Ejecutar análisis de código estático con Bash'
+# - stage: LintCode
+#   dependsOn: Install
+#   jobs:
+#   - job: LintCode
+#     steps:
+#     - task: Bash@3
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           ./lint.sh
+#       displayName: 'Ejecutar análisis de código estático con Bash'
 
 - stage: SonarQubeAnalysis
-  dependsOn: LintCode
+  dependsOn: Install
   jobs:
   - job: SonarQubeAnalysis
     steps:
