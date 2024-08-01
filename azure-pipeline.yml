@@ -30,20 +30,8 @@ stages:
         npm install
       displayName: 'Instalar dependencias'
 
-- stage: LintCode
-  dependsOn: InstallDependencies
-  jobs:
-  - job: LintCode
-    steps:
-    - task: Bash@3
-      inputs:
-        targetType: 'inline'
-        script: |
-          ./lint.sh
-      displayName: 'Ejecutar análisis de código estático con Bash'
-
 - stage: SonarQubeAnalysis
-  dependsOn: LintCode
+  dependsOn: InstallDependencies
   jobs:
   - job: SonarQubeAnalysis
     steps:
@@ -65,8 +53,20 @@ stages:
         pollingTimeoutSec: '300'
       displayName: 'Publicar resultados de SonarQube'
 
-- stage: UnitTests
+- stage: LintCode
   dependsOn: SonarQubeAnalysis
+  jobs:
+  - job: LintCode
+    steps:
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          ./lint.sh
+      displayName: 'Ejecutar análisis de código estático con Bash'
+
+- stage: UnitTests
+  dependsOn: LintCode
   jobs:
   - job: UnitTests
     steps:
