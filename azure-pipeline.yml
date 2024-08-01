@@ -12,9 +12,10 @@ variables:
   azureSubscription: 'AzureServiceConnection'  # Nombre de tu conexión de servicio
   resourceGroup: 'miNuevoGrupoDeRecursos'
   aksCluster: 'miClusterAKS'
-  sonarQubeEndpoint: 'sonarqube'  # Nombre de tu conexión de servicio a SonarQube
+  sonarQubeEndpoint: 'https://sonarqube.example.com'  # URL de tu servidor SonarQube
   sonarQubeProjectKey: 'pruebaultima-key'  # Clave del proyecto en SonarQube
   sonarQubeProjectName: 'pruebaultima'  # Nombre del proyecto en SonarQube
+  sonarQubeLogin: 'your-sonarqube-token'  # Token de autenticación de SonarQube
 
 stages:
 - stage: Checkout
@@ -50,7 +51,11 @@ stages:
         $env:PATH += ";$(pwd)\sonar-scanner-4.6.2.2472-windows\bin"
         
         # Ejecuta el análisis de SonarQube
-        sonar-scanner -Dsonar.projectKey=$(sonarQubeProjectKey) -Dsonar.projectName=$(sonarQubeProjectName) -Dsonar.host.url=$(sonarQubeEndpoint)
+        sonar-scanner -Dsonar.projectKey=$(sonarQubeProjectKey) `
+                      -Dsonar.projectName=$(sonarQubeProjectName) `
+                      -Dsonar.host.url=$(sonarQubeEndpoint) `
+                      -Dsonar.login=$(sonarQubeLogin) `
+                      -Dsonar.sources=.
       displayName: 'Instalar y ejecutar análisis de SonarQube'
 
 - stage: TestCode
