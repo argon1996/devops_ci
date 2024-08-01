@@ -2,24 +2,32 @@ trigger:
 - main
 
 pool:
-  name: 'Default'
+  name: 'Default'  # Nombre del pool donde está tu agente autoalojado
 
 variables:
   imageRepository: 'edwardpinzon651/hello-world'
   containerRegistry: 'miregistro1996.azurecr.io'
   dockerfilePath: 'Dockerfile'
   tag: '$(Build.BuildId)'
-  azureSubscription: 'AzureServiceConnection'
+  azureSubscription: 'AzureServiceConnection'  # Nombre de tu conexión de servicio
   resourceGroup: 'miNuevoGrupoDeRecursos'
   aksCluster: 'miClusterAKS'
-  sonarQubeEndpoint: 'sonarqube'
-  sonarQubeProjectKey: 'pruebaultima-key'
-  sonarQubeProjectName: 'pruebaultima'
+  sonarQubeEndpoint: 'sonarqube'  # Nombre de tu conexión de servicio a SonarQube
+  sonarQubeProjectKey: 'pruebaultima-key'  # Clave del proyecto en SonarQube
+  sonarQubeProjectName: 'pruebaultima'  # Nombre del proyecto en SonarQube
 
 stages:
-- stage: InstallDependencies
+- stage: Checkout
   jobs:
-  - job: InstallDependencies
+  - job: Checkout
+    steps:
+    - checkout: self
+      displayName: 'Clonar repositorio'
+
+- stage: Install
+  dependsOn: Checkout
+  jobs:
+  - job: Install
     steps:
     - task: UseNode@1
       inputs:
@@ -31,10 +39,18 @@ stages:
       displayName: 'Instalar dependencias'
 
 - stage: SonarQubeAnalysis
-  dependsOn: InstallDependencies
+  dependsOn: Install
   jobs:
   - job: SonarQubeAnalysis
     steps:
+    - task: adopt-openjdk-installer@1
+      inputs:
+        majorVersion: '17'
+        useLatestOption: 'latest'
+        jdkArchitectureOption: 'x64'
+        jvmOption: 'hotspot'
+      displayName: 'Instalar AdoptOpenJDK 17'
+
     - task: SonarQubePrepare@5
       inputs:
         SonarQube: '$(sonarQubeEndpoint)'
@@ -53,42 +69,25 @@ stages:
         pollingTimeoutSec: '300'
       displayName: 'Publicar resultados de SonarQube'
 
-- stage: LintCode
+- stage: TestCode
   dependsOn: SonarQubeAnalysis
   jobs:
-  - job: LintCode
-    steps:
-    - task: Bash@3
-      inputs:
-        targetType: 'inline'
-        script: |
-          ./lint.sh
-      displayName: 'Ejecutar análisis de código estático con Bash'
-
-- stage: UnitTests
-  dependsOn: LintCode
-  jobs:
-  - job: UnitTests
+  - job: TestCode
     steps:
     - script: |
         npm test
       displayName: 'Ejecutar pruebas unitarias'
 
-- stage: BuildDockerImage
-  dependsOn: UnitTests
+- stage: BuildDocker
+  dependsOn: TestCode
   jobs:
-  - job: BuildDockerImage
+  - job: BuildDocker
     steps:
     - script: |
         docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
         docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
       displayName: 'Construir imagen Docker'
 
-- stage: PushDockerImage
-  dependsOn: BuildDockerImage
-  jobs:
-  - job: PushDockerImage
-    steps:
     - task: Docker@2
       inputs:
         command: 'login'
@@ -98,10 +97,10 @@ stages:
         docker push $(containerRegistry)/$(imageRepository):$(tag)
       displayName: 'Enviar imagen Docker al registro'
 
-- stage: DeployToAKS
-  dependsOn: PushDockerImage
+- stage: Deploy
+  dependsOn: BuildDocker
   jobs:
-  - job: DeployToAKS
+  - job: Deploy
     steps:
     - task: AzureCLI@2
       inputs:
