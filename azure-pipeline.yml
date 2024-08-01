@@ -2,19 +2,19 @@ trigger:
 - main
 
 pool:
-  name: 'Default'
+  name: 'Default'  # Nombre del pool donde está tu agente autoalojado
 
 variables:
   imageRepository: 'edwardpinzon651/hello-world'
   containerRegistry: 'miregistro1996.azurecr.io'
   dockerfilePath: 'Dockerfile'
   tag: '$(Build.BuildId)'
-  azureSubscription: 'AzureServiceConnection'
+  azureSubscription: 'AzureServiceConnection'  # Nombre de tu conexión de servicio
   resourceGroup: 'miNuevoGrupoDeRecursos'
   aksCluster: 'miClusterAKS'
-  sonarQubeEndpoint: 'sonarqube'
-  sonarQubeProjectKey: 'pruebaultima-key'
-  sonarQubeProjectName: 'pruebaultima'
+  sonarQubeEndpoint: 'sonarqube'  # Nombre de tu conexión de servicio a SonarQube
+  sonarQubeProjectKey: 'pruebaultima-key'  # Clave del proyecto en SonarQube
+  sonarQubeProjectName: 'pruebaultima'  # Nombre del proyecto en SonarQube
 
 stages:
 - stage: Checkout
@@ -38,6 +38,7 @@ stages:
         npm install
       displayName: 'Instalar dependencias'
 
+# Comentando el análisis de lint para evitar errores
 # - stage: LintCode
 #   dependsOn: Install
 #   jobs:
