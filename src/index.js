@@ -13,8 +13,3 @@ const server = http.createServer((req, res) => {
 server.listen(port, hostname, () => {
   console.log(`Server running at http://${hostname}:${port}/`);
 });
-
-// src/index.js
-const unusedVariable = 'This is an unused variable';
-
-console.log('Hello World');
