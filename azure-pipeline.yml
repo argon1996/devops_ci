@@ -15,99 +15,88 @@ variables:
   sonarQubeEndpoint: 'sonarqube'  # Nombre de tu conexión de servicio a SonarQube
   sonarQubeProjectKey: 'pruebaultima-key'  # Clave del proyecto en SonarQube
   sonarQubeProjectName: 'pruebaultima'  # Nombre del proyecto en SonarQube
+  sonarScannerVersion: '4.6.2.2472'  # Versión del SonarScanner compatible con Java 11
 
-stages:
-- stage: Checkout
-  jobs:
-  - job: Checkout
-    steps:
-    - checkout: self
-      displayName: 'Clonar repositorio'
+jobs:
+- job: Checkout
+  steps:
+  - checkout: self
+    displayName: 'Clonar repositorio'
 
-- stage: Install
+- job: Install
   dependsOn: Checkout
-  jobs:
-  - job: Install
-    steps:
-    - task: UseNode@1
-      inputs:
-        versionSpec: '14.x'
-        checkLatest: true
+  steps:
+  - task: UseNode@1
+    inputs:
+      versionSpec: '14.x'
+      checkLatest: true
 
-    - script: |
-        npm install
-      displayName: 'Instalar dependencias'
+  - script: |
+      npm install
+    displayName: 'Instalar dependencias'
 
-- stage: SonarQubeAnalysis
+- job: SonarQubeAnalysis
   dependsOn: Install
-  jobs:
-  - job: SonarQubeAnalysis
-    steps:
-    - script: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-17-jdk
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        export PATH=$JAVA_HOME/bin:$PATH
-        java -version
-      displayName: 'Instalar y configurar Java 17'
+  steps:
+  - script: |
+      wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-$(sonarScannerVersion)-linux.zip
+      unzip sonar-scanner-cli-$(sonarScannerVersion)-linux.zip
+      export PATH=$(pwd)/sonar-scanner-$(sonarScannerVersion)-linux/bin:$PATH
+      echo "SonarScanner $(sonarScannerVersion) descargado e instalado."
+    displayName: 'Instalar SonarScanner'
 
-    - task: SonarQubePrepare@5
-      inputs:
-        SonarQube: '$(sonarQubeEndpoint)'
-        scannerMode: 'CLI'
-        configMode: 'manual'
-        cliProjectKey: '$(sonarQubeProjectKey)'
-        cliProjectName: '$(sonarQubeProjectName)'
-        cliSources: '.'
-      displayName: 'Preparar análisis de SonarQube'
+  - task: SonarQubePrepare@5
+    inputs:
+      SonarQube: '$(sonarQubeEndpoint)'
+      scannerMode: 'CLI'
+      configMode: 'manual'
+      cliProjectKey: '$(sonarQubeProjectKey)'
+      cliProjectName: '$(sonarQubeProjectName)'
+      cliSources: '.'
+    displayName: 'Preparar análisis de SonarQube'
 
-    - task: SonarQubeAnalyze@5
-      displayName: 'Ejecutar análisis de SonarQube'
+  - script: |
+      sonar-scanner
+    displayName: 'Ejecutar análisis de SonarQube'
 
-    - task: SonarQubePublish@5
-      inputs:
-        pollingTimeoutSec: '300'
-      displayName: 'Publicar resultados de SonarQube'
+  - task: SonarQubePublish@5
+    inputs:
+      pollingTimeoutSec: '300'
+    displayName: 'Publicar resultados de SonarQube'
 
-- stage: TestCode
+- job: TestCode
   dependsOn: SonarQubeAnalysis
-  jobs:
-  - job: TestCode
-    steps:
-    - script: |
-        npm test
-      displayName: 'Ejecutar pruebas unitarias'
+  steps:
+  - script: |
+      npm test
+    displayName: 'Ejecutar pruebas unitarias'
 
-- stage: BuildDocker
+- job: BuildDocker
   dependsOn: TestCode
-  jobs:
-  - job: BuildDocker
-    steps:
-    - script: |
-        docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
-        docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
-      displayName: 'Construir imagen Docker'
+  steps:
+  - script: |
+      docker build -t $(imageRepository):$(tag) -f $(dockerfilePath) .
+      docker tag $(imageRepository):$(tag) $(containerRegistry)/$(imageRepository):$(tag)
+    displayName: 'Construir imagen Docker'
 
-    - task: Docker@2
-      inputs:
-        command: 'login'
-        containerRegistry: 'dockerRegistryConnection'
+  - task: Docker@2
+    inputs:
+      command: 'login'
+      containerRegistry: 'dockerRegistryConnection'
 
-    - script: |
-        docker push $(containerRegistry)/$(imageRepository):$(tag)
-      displayName: 'Enviar imagen Docker al registro'
+  - script: |
+      docker push $(containerRegistry)/$(imageRepository):$(tag)
+    displayName: 'Enviar imagen Docker al registro'
 
-- stage: Deploy
+- job: Deploy
   dependsOn: BuildDocker
-  jobs:
-  - job: Deploy
-    steps:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: '$(azureSubscription)'
-        scriptType: 'ps'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster)
-          kubectl apply -f deployment.yaml
-      displayName: 'Desplegar en AKS'
+  steps:
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: '$(azureSubscription)'
+      scriptType: 'ps'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster)
+        kubectl apply -f deployment.yaml
+    displayName: 'Desplegar en AKS'
