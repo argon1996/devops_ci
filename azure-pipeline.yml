@@ -38,19 +38,6 @@ stages:
         npm install
       displayName: 'Instalar dependencias'
 
-# Comentando el análisis de lint para evitar errores
-# - stage: LintCode
-#   dependsOn: Install
-#   jobs:
-#   - job: LintCode
-#     steps:
-#     - task: Bash@3
-#       inputs:
-#         targetType: 'inline'
-#         script: |
-#           ./lint.sh
-#       displayName: 'Ejecutar análisis de código estático con Bash'
-
 - stage: SonarQubeAnalysis
   dependsOn: Install
   jobs:
