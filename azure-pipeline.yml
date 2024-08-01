@@ -43,13 +43,13 @@ jobs:
       $output = "sonar-scanner.zip"
       Invoke-WebRequest -Uri $url -OutFile $output
       Expand-Archive -Path $output -DestinationPath . -Force
-      $env:PATH = "$(Get-Location)\sonar-scanner-$(sonarScannerVersion)-windows\bin;$env:PATH"
-      [System.Environment]::SetEnvironmentVariable('PATH', $env:PATH, [System.EnvironmentVariableTarget]::Process)
+      $scannerPath = "$(Get-Location)\sonar-scanner-$(sonarScannerVersion)-windows\bin"
+      [System.Environment]::SetEnvironmentVariable('PATH', "$scannerPath;$env:PATH", [System.EnvironmentVariableTarget]::Process)
       Write-Output "SonarScanner $(sonarScannerVersion) descargado e instalado."
     displayName: 'Instalar SonarScanner'
 
-  - script: |
-      sonar-scanner
+  - powershell: |
+      Start-Process sonar-scanner -NoNewWindow -Wait
     displayName: 'Ejecutar análisis de SonarQube'
 
 - job: TestCode
